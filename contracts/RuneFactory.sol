@@ -15,9 +15,18 @@ contract Rune is ERC20, Ownable {
 
 contract RuneFactory {
     event TokenCreated(address tokenAddress);
+    struct Token {
+        string name;
+        string symbol;
+        uint256 initialSupply;
+        address initialOwner;
+        uint256 runeIDBTC;
+    }
+    Token[] public tokens;
     
-    function createRune(string memory name, string memory symbol, uint256 initialSupply, address initialOwner) public {
-        MyERC20Token newToken = new MyERC20Token(name, symbol, initialSupply, initialOwner);
+    function createRune(string memory name, string memory symbol, uint256 initialSupply, address initialOwner, uint256 runeIDBTC) public {
+        Rune newToken = new Rune(name, symbol, initialSupply, initialOwner);
+        tokens.push(Token(name, symbol, initialSupply, initialOwner, runeIDBTC));
         emit TokenCreated(address(newToken));
     }
 }
