@@ -27,6 +27,18 @@ contract RuneFactory {
     }
     Token[] public tokens;
 
+    function getTokenCount() public view returns (uint256) {
+        return tokens.length;
+    }
+
+    function getToken(uint256 index) public view returns (Token memory) {
+        return tokens[index];
+    }
+
+    function getTokens() public view returns (Token[] memory) {
+        return tokens;
+    }
+
     function getTokenAddress(string memory name, string memory symbol, uint256 initialSupply, address initialOwner, bytes32 salt) public view returns (address) {
         bytes memory bytecode = abi.encodePacked(
             type(Rune).creationCode,
