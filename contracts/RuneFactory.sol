@@ -9,7 +9,10 @@ contract Rune is ERC20, Ownable {
     constructor(string memory name, string memory symbol, uint256 initialSupply, address initialOwner) 
         ERC20(name, symbol)
         Ownable(initialOwner) {
-        _mint(msg.sender, initialSupply);
+        _mint(initialOwner, initialSupply);
+    }
+    function mint(address to, uint256 amount) public {
+        _mint(to, amount);
     }
 }
 
@@ -23,9 +26,27 @@ contract RuneFactory {
         uint256 runeIDBTC;
     }
     Token[] public tokens;
-    
-    function createRune(string memory name, string memory symbol, uint256 initialSupply, address initialOwner, uint256 runeIDBTC) public {
-        Rune newToken = new Rune(name, symbol, initialSupply, initialOwner);
+
+    function getTokenAddress(string memory name, string memory symbol, uint256 initialSupply, address initialOwner, bytes32 salt) public view returns (address) {
+        bytes memory bytecode = abi.encodePacked(
+            type(Rune).creationCode,
+            abi.encode(name, symbol, initialSupply, initialOwner)
+        );
+        bytes32 hash = keccak256(
+            abi.encodePacked(
+                bytes1(0xff),
+                address(this),
+                salt,
+                keccak256(bytecode)
+            )
+        );
+        return address(uint160(uint(hash)));
+    }
+
+    function createRune(string memory name, string memory symbol, uint256 initialSupply, address initialOwner, uint256 runeIDBTC, bytes32 salt) public {
+        address predictedAddress = getTokenAddress(name, symbol, initialSupply, initialOwner, salt);
+        Rune newToken = new Rune{salt: salt}(name, symbol, initialSupply, initialOwner);
+        require(address(newToken) == predictedAddress, "Address prediction failed");
         tokens.push(Token(name, symbol, initialSupply, initialOwner, runeIDBTC));
         emit TokenCreated(address(newToken));
     }
