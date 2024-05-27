@@ -1,7 +1,7 @@
 # Runes Bridge Smart Contracts on RSK Network
 
 ## Frontend integration
-In the frontend, you must use first, the Factory function called 
+In the frontend, you must use first, the Factory function called ```getTokenAddress```
 
 ```javascript
  function getTokenAddress(
