@@ -28,7 +28,7 @@ contract Rune is ERC20, Ownable {
 }
 
 contract RuneFactory {
-    event TokenCreated(address indexed tokenAddress, string indexed name, string indexed symbol, uint256 initialSupply, address initialOwner, uint256 runeIDBTC);
+    event TokenCreated(address tokenAddress, string name, string symbol, uint256 initialSupply, address initialOwner, uint256 runeIDBTC);
     struct Token {
         string name;
         string symbol;
