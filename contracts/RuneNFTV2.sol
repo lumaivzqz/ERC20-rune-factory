@@ -33,7 +33,6 @@ contract RuneToken is ERC1155, Ownable {
      * @dev Mints a new fungible token
      * @param tokenURI URI of the token
      * @param runeName Unique name of the rune
-     * @param name Name of the token
      * @param symbol Symbol of the token
      * @param maxSupply Maximum supply of the token
      * @param initialSupply Initial supply of the token
@@ -42,11 +41,11 @@ contract RuneToken is ERC1155, Ownable {
     function mintFungible(
         string memory tokenURI,
         string memory runeName,
-        string memory name,
         string memory symbol,
         uint256 maxSupply,
         uint256 initialSupply,
-        uint256 defaultMintAmount
+        uint256 defaultMintAmount,
+        address receiver
     ) public onlyOwner {
         require(initialSupply <= maxSupply, "Initial supply exceeds max supply");
 
@@ -56,29 +55,28 @@ contract RuneToken is ERC1155, Ownable {
 
         _tokenInfos[tokenId] = TokenInfo({
             uri: tokenURI,
-            name: name,
+            name: runeName,
             symbol: symbol,
             maxSupply: maxSupply,
             currentSupply: initialSupply,
             defaultMintAmount: defaultMintAmount
         });
 
-        _mint(msg.sender, tokenId, initialSupply, "");
-        _addUserToken(msg.sender, tokenId);
+        _mint(receiver, tokenId, initialSupply, "");
+        _addUserToken(receiver, tokenId);
     }
 
     /**
      * @dev Mints a new non-fungible token in case the rune has only 1 unit on creation, and max cap of 1
      * @param tokenURI URI of the token
      * @param runeName Unique name of the rune
-     * @param name Name of the token
      * @param symbol Symbol of the token
      */
     function mintNonFungible(
         string memory tokenURI,
         string memory runeName,
-        string memory name,
-        string memory symbol
+        string memory symbol,
+        address receiver
     ) public onlyOwner {
         bytes32 tokenIdHash = keccak256(abi.encodePacked(runeName));
         uint256 tokenId = uint256(tokenIdHash);
@@ -86,22 +84,22 @@ contract RuneToken is ERC1155, Ownable {
 
         _tokenInfos[tokenId] = TokenInfo({
             uri: tokenURI,
-            name: name,
+            name: runeName,
             symbol: symbol,
             maxSupply: 1,
             currentSupply: 1,
             defaultMintAmount: 1
         });
 
-        _mint(msg.sender, tokenId, 1, "");
-        _addUserToken(msg.sender, tokenId);
+        _mint(receiver, tokenId, 1, "");
+        _addUserToken(receiver, tokenId);
     }
 
     /**
-     * @dev Mints more of an existing token, if the token is fungible and if the max supply has not been reached, it's defined as open minting due to the current runes design
+     * @dev Mints more of an existing token, if the token is fungible and if the max supply has not been reached
      * @param runeName Bitcoin (unique) name of the rune to mint more of
      */
-    function mintMore(string memory runeName) external {
+    function mintMore(string memory runeName, address receiver) external onlyOwner {
         bytes32 tokenIdHash = keccak256(abi.encodePacked(runeName));
         uint256 tokenId = uint256(tokenIdHash);
 
@@ -111,9 +109,9 @@ contract RuneToken is ERC1155, Ownable {
             "Exceeds max supply"
         );
 
-        _mint(msg.sender, tokenId, _tokenInfos[tokenId].defaultMintAmount, "");
+        _mint(receiver, tokenId, _tokenInfos[tokenId].defaultMintAmount, "");
         _tokenInfos[tokenId].currentSupply += _tokenInfos[tokenId].defaultMintAmount;
-        _addUserToken(msg.sender, tokenId);
+        _addUserToken(receiver, tokenId);
     }
 
     /**
