@@ -6,6 +6,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract RuneToken is ERC1155, Ownable {
+    struct Balance {
+        address account;
+        uint256 balance;
+    }
+
     struct TokenInfo {
         string uri;
         string name;
@@ -13,6 +18,7 @@ contract RuneToken is ERC1155, Ownable {
         uint256 maxSupply;
         uint256 currentSupply;
         uint256 defaultMintAmount;
+        Balance balance;
     }
 
     mapping(uint256 => TokenInfo) private _tokenInfos;
@@ -47,7 +53,10 @@ contract RuneToken is ERC1155, Ownable {
         uint256 defaultMintAmount,
         address receiver
     ) public onlyOwner {
-        require(initialSupply <= maxSupply, "Initial supply exceeds max supply");
+        require(
+            initialSupply <= maxSupply,
+            "Initial supply exceeds max supply"
+        );
 
         bytes32 tokenIdHash = keccak256(abi.encodePacked(runeName));
         uint256 tokenId = uint256(tokenIdHash);
@@ -59,7 +68,8 @@ contract RuneToken is ERC1155, Ownable {
             symbol: symbol,
             maxSupply: maxSupply,
             currentSupply: initialSupply,
-            defaultMintAmount: defaultMintAmount
+            defaultMintAmount: defaultMintAmount,
+            balance: Balance(address(0), 0)
         });
 
         _mint(receiver, tokenId, initialSupply, "");
@@ -88,7 +98,8 @@ contract RuneToken is ERC1155, Ownable {
             symbol: symbol,
             maxSupply: 1,
             currentSupply: 1,
-            defaultMintAmount: 1
+            defaultMintAmount: 1,
+            balance: Balance(address(0), 0)
         });
 
         _mint(receiver, tokenId, 1, "");
@@ -99,18 +110,24 @@ contract RuneToken is ERC1155, Ownable {
      * @dev Mints more of an existing token, if the token is fungible and if the max supply has not been reached
      * @param runeName Bitcoin (unique) name of the rune to mint more of
      */
-    function mintMore(string memory runeName, address receiver) external onlyOwner {
+    function mintMore(
+        string memory runeName,
+        address receiver
+    ) external onlyOwner {
         bytes32 tokenIdHash = keccak256(abi.encodePacked(runeName));
         uint256 tokenId = uint256(tokenIdHash);
 
         require(_tokenInfos[tokenId].maxSupply > 0, "Token ID does not exist");
         require(
-            _tokenInfos[tokenId].currentSupply + _tokenInfos[tokenId].defaultMintAmount <= _tokenInfos[tokenId].maxSupply,
+            _tokenInfos[tokenId].currentSupply +
+                _tokenInfos[tokenId].defaultMintAmount <=
+                _tokenInfos[tokenId].maxSupply,
             "Exceeds max supply"
         );
 
         _mint(receiver, tokenId, _tokenInfos[tokenId].defaultMintAmount, "");
-        _tokenInfos[tokenId].currentSupply += _tokenInfos[tokenId].defaultMintAmount;
+        _tokenInfos[tokenId].currentSupply += _tokenInfos[tokenId]
+            .defaultMintAmount;
         _addUserToken(receiver, tokenId);
     }
 
@@ -132,10 +149,18 @@ contract RuneToken is ERC1155, Ownable {
      * @return TokenInfo struct containing the token's information
      */
     function getTokenInfo(
-        uint256 tokenId
+        uint256 tokenId,
+        address holder
     ) public view returns (TokenInfo memory) {
-        require(_tokenInfos[tokenId].maxSupply > 0, "Token ID does not exist");
-        return _tokenInfos[tokenId];
+        TokenInfo memory tokenInfo = _tokenInfos[tokenId];
+        require(tokenInfo.maxSupply > 0, "Token ID does not exist");
+
+        if (holder != address(0)) {
+            uint256 userBalance = balanceOf(holder, tokenId);
+            tokenInfo.balance = Balance(holder, userBalance);
+        }
+
+        return tokenInfo;
     }
 
     /**
