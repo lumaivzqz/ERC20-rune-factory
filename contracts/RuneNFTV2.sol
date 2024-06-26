@@ -153,12 +153,12 @@ contract RuneToken is ERC1155, Ownable {
      * @param tokenId ID of the token to unfreeze
      * @param amount Amount of tokens to unfreeze
      */
-    function unfreezeTokens(uint256 tokenId, uint256 amount) external onlyOwner(){
+    function unfreezeTokens(uint256 tokenId, uint256 amount, address owner) external onlyOwner{
         require(amount > 0, "Amount must be greater than zero");
-        require(_frozenTokens[tokenId][msg.sender] >= amount, "Insufficient frozen balance to unfreeze");
+        require(_frozenTokens[tokenId][owner] >= amount, "Insufficient frozen balance to unfreeze");
 
-        _frozenTokens[tokenId][msg.sender] -= amount;
-        emit TokensUnfrozen(msg.sender, tokenId, amount);
+        _frozenTokens[tokenId][owner] -= amount;
+        emit TokensUnfrozen(owner, tokenId, amount);
     }
 
     /**
