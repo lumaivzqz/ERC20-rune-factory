@@ -6,6 +6,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 
 contract RuneToken is ERC1155, Ownable {
+    event TokensFrozen(address indexed account, uint256 indexed tokenId, uint256 amount);
+    event TokensUnfrozen(address indexed account, uint256 indexed tokenId, uint256 amount);
+
     struct Balance {
         address account;
         uint256 balance;
@@ -23,6 +26,7 @@ contract RuneToken is ERC1155, Ownable {
 
     mapping(uint256 => TokenInfo) private _tokenInfos;
     mapping(address => uint256[]) private _userTokens;
+    mapping(uint256 => mapping(address => uint256)) private _frozenTokens;
 
     constructor(address initialOwner) ERC1155("") Ownable(initialOwner) {}
 
@@ -132,15 +136,29 @@ contract RuneToken is ERC1155, Ownable {
     }
 
     /**
-     * @dev Set the token URI
-     * @param tokenId ID of the token to define URI for
-     * @param tokenURI URI to set for the token (can be IPFS or HTTP(S) URL)
+     * @dev Freezes tokens for a specific user
+     * @param tokenId ID of the token to freeze
+     * @param amount Amount of tokens to freeze
      */
-    function _setTokenURI(
-        uint256 tokenId,
-        string memory tokenURI
-    ) internal virtual {
-        _tokenInfos[tokenId].uri = tokenURI;
+    function freezeTokens(uint256 tokenId, uint256 amount, address owner) external onlyOwner {
+        require(amount > 0, "Amount must be greater than zero");
+        require(balanceOf(owner, tokenId) >= amount, "Insufficient balance to freeze");
+
+        _frozenTokens[tokenId][owner] += amount;
+        emit TokensFrozen(owner, tokenId, amount);
+    }
+
+    /**
+     * @dev Unfreezes tokens for a specific user
+     * @param tokenId ID of the token to unfreeze
+     * @param amount Amount of tokens to unfreeze
+     */
+    function unfreezeTokens(uint256 tokenId, uint256 amount) external onlyOwner(){
+        require(amount > 0, "Amount must be greater than zero");
+        require(_frozenTokens[tokenId][msg.sender] >= amount, "Insufficient frozen balance to unfreeze");
+
+        _frozenTokens[tokenId][msg.sender] -= amount;
+        emit TokensUnfrozen(msg.sender, tokenId, amount);
     }
 
     /**
@@ -190,5 +208,43 @@ contract RuneToken is ERC1155, Ownable {
         if (!tokenExists) {
             _userTokens[user].push(tokenId);
         }
+    }
+
+    /**
+     * @dev Override the balanceOf function to consider frozen tokens
+     */
+    function balanceOf(address account, uint256 tokenId) public view override returns (uint256) {
+        uint256 totalBalance = super.balanceOf(account, tokenId);
+        uint256 frozenBalance = _frozenTokens[tokenId][account];
+        return totalBalance - frozenBalance;
+    }
+    /**
+     * @dev Override the safeTransferFrom function to consider frozen tokens
+     */
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 id,
+        uint256 amount,
+        bytes memory data
+    ) public virtual override {
+        require(balanceOf(from, id) >= amount + _frozenTokens[id][from], "Insufficient unlocked balance for transfer");
+        super.safeTransferFrom(from, to, id, amount, data);
+    }
+
+    /**
+     * @dev Override the safeBatchTransferFrom function to consider frozen tokens
+     */
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public virtual override {
+        for (uint256 i = 0; i < ids.length; i++) {
+            require(balanceOf(from, ids[i]) >= amounts[i] + _frozenTokens[ids[i]][from], "Insufficient unlocked balance for transfer");
+        }
+        super.safeBatchTransferFrom(from, to, ids, amounts, data);
     }
 }
